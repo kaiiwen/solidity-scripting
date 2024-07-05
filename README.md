@@ -1,66 +1,27 @@
-## Foundry
-
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
+# Solidy-scripting
 
 ## Usage
 
-### Build
+### Fetching with recursion
 
 ```shell
-$ forge build
+git fetch --recurse-submodules
 ```
 
-### Test
+### To load the variables in the .env file
 
 ```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
+source .env
 ```
 
 ### Deploy
 
 ```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+$ forge script --chain sepolia --rpc-url $SEPOLIA_RPC_URL --broadcast --verify -vvvv script/MultiToken.s.sol:MultiTokenScript  --sig "deploy(string memory _baseURI)" <_baseURI>
 ```
 
-### Cast
+### Mint
 
 ```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+$ forge script --chain sepolia --rpc-url $SEPOLIA_RPC_URL --broadcast --verify -vvvv script/MultiToken.s.sol:MultiTokenScript  --sig "mint(address deployedContractAddress, address mintTo, uint256[] memory ids, uint256[] memory amounts, bytes memory data)" <deployedContractAddress> <mintTo> <ids []> <amounts []> <data>
 ```

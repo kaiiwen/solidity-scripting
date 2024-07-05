@@ -4,14 +4,12 @@ pragma solidity ^0.8.26;
 import "forge-std/Script.sol";
 import "../src/MultiToken.sol";
 
-contract MyMultiTokenScript is Script {
-    function deploy() external {
+contract MultiTokenScript is Script {
+    function deploy(string memory _baseURI) external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        new MultiToken(
-            "ipfs://QmdKBybmC4ECmGemDpjxcYj5hhox5ccmAFyGHzJDWF5JKX/"
-        );
+        new MultiToken(_baseURI);
 
         vm.stopBroadcast();
     }
