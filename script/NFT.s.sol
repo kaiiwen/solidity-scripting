@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import "forge-std/Script.sol";
 import "../src/NFT.sol";
 
-contract MyNFTScript is Script {
+contract NFTScript is Script {
     function run(
         string memory _name,
         string memory _symbol,
