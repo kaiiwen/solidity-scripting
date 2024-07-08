@@ -17,7 +17,7 @@ source .env
 ### Deploy
 
 ```shell
-$ forge script --chain sepolia --rpc-url $SEPOLIA_RPC_URL --broadcast --verify -vvvv script/MultiToken.s.sol:MultiTokenScript  --sig "deploy(string memory _baseURI)" <_baseURI>
+$ forge script --chain sepolia --rpc-url $SEPOLIA_RPC_URL --broadcast --verify -vvvv script/MultiToken.s.sol:MultiTokenScript  --sig "deploy(string memory _baseURI, string memory _contractMetedataURI)" <_baseURI> <_contractMetedataURI>
 ```
 
 ### Mint

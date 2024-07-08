@@ -2,22 +2,24 @@
 pragma solidity ^0.8.26;
 
 import "lib/solmate/src/tokens/ERC1155.sol";
-import "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
-import "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "lib/solmate/src/utils/LibString.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract MultiToken is ERC1155, Ownable {
-    using Strings for uint256;
+contract MultiToken is ERC1155, AccessControl {
+    using LibString for uint256;
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
 
     string private baseURI;
     string public contractMetadataURI;
 
-    constructor(string memory _baseURI) ERC1155() Ownable(msg.sender) {
+    constructor(
+        string memory _baseURI,
+        string memory _contractMetedataURI
+    ) ERC1155() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         baseURI = _baseURI;
-        contractMetadataURI = contractURI();
-    }
-
-    function setBaseURI(string memory _baseURI) external onlyOwner {
-        baseURI = _baseURI;
+        contractMetadataURI = _contractMetedataURI;
     }
 
     function uri(
@@ -26,8 +28,8 @@ contract MultiToken is ERC1155, Ownable {
         return string(abi.encodePacked(baseURI, id.toString(), ".json"));
     }
 
-    function contractURI() public pure returns (string memory) {
-        return "ipfs://QmZQn5FbBHLLpFgpUrZ26e3pnmsup5NJe6c284FrVHc1VF";
+    function contractURI() public view returns (string memory) {
+        return contractMetadataURI;
     }
 
     function tokenURI(uint256 _tokenId) public view returns (string memory) {
@@ -39,7 +41,7 @@ contract MultiToken is ERC1155, Ownable {
         uint256 id,
         uint256 amount,
         bytes memory data
-    ) public virtual {
+    ) public virtual onlyRole(MINTER_ROLE) {
         _mint(to, id, amount, data);
     }
 
@@ -48,11 +50,15 @@ contract MultiToken is ERC1155, Ownable {
         uint256[] memory ids,
         uint256[] memory amounts,
         bytes memory data
-    ) public virtual {
+    ) public virtual onlyRole(MINTER_ROLE) {
         _batchMint(to, ids, amounts, data);
     }
 
-    function burn(address from, uint256 id, uint256 amount) public virtual {
+    function burn(
+        address from,
+        uint256 id,
+        uint256 amount
+    ) public virtual onlyRole(BURNER_ROLE) {
         _burn(from, id, amount);
     }
 
@@ -60,7 +66,13 @@ contract MultiToken is ERC1155, Ownable {
         address from,
         uint256[] memory ids,
         uint256[] memory amounts
-    ) public virtual {
+    ) public virtual onlyRole(BURNER_ROLE) {
         _batchBurn(from, ids, amounts);
+    }
+
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(AccessControl, ERC1155) returns (bool) {
+        return ERC1155(address(this)).supportsInterface(interfaceId);
     }
 }

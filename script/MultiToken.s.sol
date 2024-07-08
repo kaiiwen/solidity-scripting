@@ -5,11 +5,11 @@ import "forge-std/Script.sol";
 import "../src/MultiToken.sol";
 
 contract MultiTokenScript is Script {
-    function deploy(string memory _baseURI) external {
+    function deploy(string memory _baseURI, string memory _contractMetedataURI) external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        new MultiToken(_baseURI);
+        new MultiToken(_baseURI, _contractMetedataURI);
 
         vm.stopBroadcast();
     }
