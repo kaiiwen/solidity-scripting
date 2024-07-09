@@ -1,0 +1,11 @@
+{
+    "name": "Pokemon",
+    "description": "A collection of 1000 unique pokemons.",
+    "image": "ipfs://bafkreictuxsz2xty2pofyyzvfezvtrkaplg5zes6djizoh2ew67el2d6cy",
+    "banner_image": "ipfs://bafkreiehm3semdy2tamj4rrpff4pop6ro5s4hvjxbbrtphhis27aeonswy",
+    "featured_image": "ipfs://bafkreif5plf2n4xyeecemch5rupujjqm6bkms6om2dz6whnptorrz2ztye",
+    "external_link": "google.com",
+    "collaborators": [
+        "0x0000000000000000000000000000000000000000"
+    ]
+}
