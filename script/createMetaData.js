@@ -2,6 +2,16 @@ const readline = require("readline");
 const fs = require("fs");
 const path = require("path");
 const { clear } = require("console");
+const { program } = require("commander");
+
+program
+  .description("Create metadata for contract or token")
+  .option(
+    "-t, --type <type>",
+    "Type of metadata to create: 'contract' or 'token'"
+  )
+  .option("-n, --name <name>", "Name of the contract collection")
+  .parse(process.argv);
 
 // Utility function to ask a question in the console
 function askQuestion(query) {
@@ -53,6 +63,7 @@ async function createContractMetadata(folderPath, name) {
   let existingData = {};
 
   if (fs.existsSync(filePath)) {
+    clear();
     const update = await askQuestion(
       "File already exists. Do you want to update the metadata? (y/n): "
     );
@@ -183,19 +194,22 @@ async function createTokenMetadata(folderPath, name) {
 }
 
 // Main function to create metadata
-async function createMetadata() {
+async function createMetadata(options) {
   clear();
-  const metadataType = await getValidInput(
-    "Are you creating contract or token metadata? (contract/token): ",
-    (input) => ["contract", "token"].includes(input.toLowerCase())
-  );
+  const metadataType = options.type;
+  const name = options.name;
+
+  if (!metadataType) {
+    throw new Error(
+      "Metadata type (--type or -t) is required. Use 'contract' or 'token'."
+    );
+  }
+
+  if (!name) {
+    throw new Error("Collection name (--name or -n) is required.");
+  }
 
   clear();
-  const name = await getValidInput(
-    "Enter contract collection name: ",
-    (input) => input.trim() !== ""
-  );
-
   const folderPath = `metadata/${name}`;
 
   if (metadataType.toLowerCase() === "contract") {
@@ -208,7 +222,9 @@ async function createMetadata() {
 // Script execution entry point
 const args = process.argv.slice(2);
 if (args.length > 0 && args[0] === "create") {
-  createMetadata();
+  createMetadata(program.opts()).catch((error) => {
+    console.error("Error during script execution:", error.message);
+  });
 } else {
-  console.log("Usage: node script/storeMetaData.js create");
+  program.help();
 }
