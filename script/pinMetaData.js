@@ -11,14 +11,18 @@ const pinata = new pinataSDK(
 
 program
   .description("Pin metadata to IPFS")
-  .option("-t, --type <type>", "Type of data to pin: 'image' or 'folder'")
-  .option("-n, --name <name>", "Name of the collection")
+  .option("-t, --type <type>", "Type of data to pin: 'file' or 'folder'")
+  .option("-cn, --contract-name <contract-name>", "Name of the contract")
   .option(
-    "-i, --imagename <imagename>",
-    "Name of the image file (without extension)"
+    "-fn, --file-name <file-name>",
+    "Name of the file (without extension)"
   )
-  .option("-f, --folderpath <path>", "Path of the folder to pin")
-  .option("-m, --metadataname <name>", "Name of the metadata")
+  .option("-fp, --folder-path <path>", "Path of the folder to pin")
+  .option(
+    "-mn, --metadata-name <metadata-name>",
+    "Name for the metadata file being pinned"
+  )
+  .option("--is-image", "Indicates if the file is an image")
   .parse(process.argv);
 
 async function uploadMetadataToIPFS(filePath, metadataName, isFolder = false) {
@@ -27,16 +31,21 @@ async function uploadMetadataToIPFS(filePath, metadataName, isFolder = false) {
     let res;
     if (isFolder) {
       res = await pinata.pinFromFS(filePath, {
-        // pinFromFS is used to pin a folder and its contents to IPFS (can be used recursively)
-        pinataMetadata: { name: metadataName }, // name for the pinned folder
+        pinataMetadata: {
+          name: metadataName,
+          keyvalues: { collection: metadataName },
+        },
       });
     } else {
       const readableStreamForFile = fs.createReadStream(filePath);
       const options = {
-        pinataMetadata: { name: metadataName }, // name for the pinned file
-        pinataOptions: { cidVersion: 1 }, // version 1 is the latest version
+        pinataMetadata: {
+          name: metadataName,
+          keyvalues: { collection: metadataName },
+        },
+        pinataOptions: { cidVersion: 1 },
       };
-      res = await pinata.pinFileToIPFS(readableStreamForFile, options); // pinFileToIPFS is used to pin a file
+      res = await pinata.pinFileToIPFS(readableStreamForFile, options);
     }
     console.log("Upload successful:", res);
     return true;
@@ -46,27 +55,37 @@ async function uploadMetadataToIPFS(filePath, metadataName, isFolder = false) {
   }
 }
 
-async function findImageFilePath(name, imageName) {
-  const extensions = ["jpg", "jpeg", "png"]; // allow for multiple image formats
-  for (const ext of extensions) {
-    const filePath = `images/${name}/${imageName}.${ext}`; // path to the image file
-    if (fs.existsSync(filePath)) {
-      return filePath;
+async function findFilePath(contractName, fileName, isImage) {
+  if (isImage) {
+    const extensions = ["jpg", "jpeg", "png"];
+    for (const ext of extensions) {
+      const filePath = `images/${contractName}/${fileName}.${ext}`;
+      if (fs.existsSync(filePath)) {
+        return filePath;
+      }
+    }
+    return null;
+  } else {
+    const genericFilePath = `metadata/${metadataName}/${fileName}.json}`;
+    if (fs.existsSync(genericFilePath)) {
+      return genericFilePath;
     }
   }
-  return null; // return null if no valid image file is found
+  return null;
 }
 
-async function pinImage(name, imageName, metadataName) {
+async function pinFile(contractName, fileName, metadataName) {
   try {
     clear();
-    const filePath = await findImageFilePath(name, imageName); // find the image file
+    const filePath = await findFilePath(contractName, fileName);
     if (!filePath) {
-      console.log(`File does not exist for the given image name in ${name}.`);
+      console.log(
+        `File does not exist for the given file name in ${contractName}.`
+      );
       return false;
     }
 
-    const success = await uploadMetadataToIPFS(filePath, metadataName); // upload the image to IPFS
+    const success = await uploadMetadataToIPFS(filePath, metadataName);
     if (success) {
       console.log("Metadata pinned successfully.");
     } else {
@@ -74,7 +93,7 @@ async function pinImage(name, imageName, metadataName) {
     }
     return success;
   } catch (error) {
-    console.error("Error during image pinning:", error.message);
+    console.error("Error during file pinning:", error.message);
     return false;
   }
 }
@@ -83,14 +102,13 @@ async function pinFolder(folderPath, metadataName) {
   try {
     clear();
     if (!fs.existsSync(folderPath) || !fs.lstatSync(folderPath).isDirectory()) {
-      // check if the folder exists and is a valid directory
       console.log(
         `Folder does not exist or is not a valid directory: ${folderPath}`
       );
       return false;
     }
 
-    const success = await uploadMetadataToIPFS(folderPath, metadataName, true); // upload the folder to IPFS (true for folder)
+    const success = await uploadMetadataToIPFS(folderPath, metadataName, true);
     if (success) {
       console.log("Metadata pinned successfully.");
     } else {
@@ -106,38 +124,49 @@ async function pinFolder(folderPath, metadataName) {
 async function pinMetadata(options) {
   try {
     clear();
+    const requiredOptions = [];
+
     if (!options.type) {
+      requiredOptions.push("--type or -t");
+    }
+
+    if (options.type === "file") {
+      if (!options.contractName) {
+        requiredOptions.push("--contract-name or -cn");
+      }
+      if (!options.fileName) {
+        requiredOptions.push("--file-name or -fn");
+      }
+      if (!options.metadataName) {
+        requiredOptions.push("--metadata-name or -mn");
+      }
+    } else if (options.type === "folder") {
+      if (!options.folderpath) {
+        requiredOptions.push("--folderpath or -fp");
+      }
+      if (!options.metadataName) {
+        requiredOptions.push("--metadata-name or -mn");
+      }
+    } else {
       throw new Error(
-        "Pin type (--type or -t) is required. Use 'image' or 'folder'."
+        "Invalid pin type (--type or -t). Use 'file' or 'folder'."
       );
     }
 
-    if (options.type === "image") {
-      if (!options.name) {
-        throw new Error("Collection name (--name or -n) is required.");
-      }
-
-      if (!options.imagename) {
-        throw new Error("Image name (--imagename or -i) is required.");
-      }
-
-      if (!options.metadataname) {
-        throw new Error("Metadata name (--metadataname or -m) is required.");
-      }
-
-      await pinImage(options.name, options.imagename, options.metadataname); // pin the image
-    } else if (options.type === "folder") {
-      if (!options.folderpath) {
-        throw new Error("Folder path (--folderpath or -f) is required.");
-      }
-      if (!options.metadataname) {
-        throw new Error("Metadata name (--metadataname or -m) is required.");
-      }
-      await pinFolder(options.folderpath, options.metadataname); // pin the folder
-    } else {
+    if (requiredOptions.length > 0) {
       throw new Error(
-        "Invalid pin type (--type or -t). Use 'image' or 'folder'."
+        `The following options are required: ${requiredOptions.join(", ")}`
       );
+    }
+
+    if (options.type === "file") {
+      await pinFile(
+        options.contractName,
+        options.fileName,
+        options.metadataName
+      );
+    } else if (options.type === "folder") {
+      await pinFolder(options.folderpath, options.metadataName);
     }
   } catch (error) {
     console.error("Error during script execution:", error.message);

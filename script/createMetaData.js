@@ -10,90 +10,84 @@ program
     "-t, --type <type>",
     "Type of metadata to create: 'contract' or 'token'"
   )
-  .option("-n, --name <name>", "Name of the contract collection")
+  .option("-cn, --contract-name <contract-name>", "Name of the contract")
+  .option("-d, --description <description>", "Description of the metadata")
+  .option("-ic, --image-cid <image-cid>", "Image CID for the metadata")
+  .option(
+    "-bc, --banner-image-cid <banner-image-cid>",
+    "Banner image CID for the metadata"
+  )
+  .option(
+    "-fc, --featured-image-cid <featured-image-cid>",
+    "Featured image CID for the metadata"
+  )
+  .option(
+    "-el, --external-link <external-link>",
+    "External link for the metadata"
+  )
+  .option(
+    "-eu, --external-url <external-url>",
+    "External URL for the token metadata"
+  )
+  .option("-tn, --token-name <token-name>", "Token name for the metadata")
+  .option("-a, --attributes <attributes>", "Attributes for the token metadata")
   .parse(process.argv);
 
-// Utility function to ask a question in the console
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
 function askQuestion(query) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  return new Promise((resolve) =>
-    rl.question(query, (answer) => {
-      rl.close();
-      resolve(answer);
-    })
-  );
+  return new Promise((resolve) => rl.question(query, resolve));
 }
 
-// Utility function to get valid input with optional validation
-async function getValidInput(promptText, validationFn = null) {
-  let userInput;
-  do {
-    userInput = await askQuestion(promptText);
-    if (validationFn && !validationFn(userInput)) {
-      console.log("Input is not in the correct format. Please try again.");
-    } else if (userInput.trim() === "") {
-      console.log("Input cannot be empty. Please try again.");
-    } else {
-      return userInput;
-    }
-  } while (true);
-}
-
-// Utility function to get the next file index in a directory
-function getNextFileIndex(directory) {
-  if (!fs.existsSync(directory)) {
-    fs.mkdirSync(directory, { recursive: true });
-    return 1;
-  }
-
-  const files = fs.readdirSync(directory);
+function getNextFileIndex(folderPath) {
+  const files = fs
+    .readdirSync(folderPath)
+    .filter((file) => file.endsWith(".json"));
   const indices = files
-    .map((file) => parseInt(path.basename(file, ".json")))
+    .map((file) => parseInt(file.replace(".json", ""), 10))
     .filter((num) => !isNaN(num));
-  return indices.length > 0 ? Math.max(...indices) + 1 : 1;
+  return indices.length ? Math.max(...indices) + 1 : 1;
 }
 
-// Function to create or update contract metadata
-async function createContractMetadata(folderPath, name) {
-  const filePath = path.join(folderPath, `${name}.json`);
-  let existingData = {};
+async function createContractMetadata(options) {
+  clear();
+  const {
+    contractName,
+    description,
+    image,
+    bannerImage,
+    featuredImage,
+    externalLink,
+  } = options;
 
-  if (fs.existsSync(filePath)) {
-    clear();
-    const update = await askQuestion(
-      "File already exists. Do you want to update the metadata? (y/n): "
+  if (
+    !contractName ||
+    !description ||
+    !image ||
+    !bannerImage ||
+    !featuredImage ||
+    !externalLink
+  ) {
+    throw new Error(
+      "All options (--contract-name or -cn, --description or -d, --image-cid or -ic, --banner-image-cid or -bc, --featured-image-cid or -fc, --external-link or -el) are required for 'contract' metadata creation."
     );
-    if (update.trim().toLowerCase() !== "y") {
-      console.log("Exiting without updating metadata.");
-      return;
-    }
-    existingData = JSON.parse(fs.readFileSync(filePath, "utf8"));
   }
 
-  clear();
-  const description = await getValidInput("Enter description: ");
-  const imageCID = await getValidInput("Enter image CID: ");
-  const bannerImageCID = await getValidInput("Enter banner image CID: ");
-  const featuredImageCID = await getValidInput("Enter featured image CID: ");
-  const externalLink = await getValidInput("Enter external link: ");
+  const folderPath = `metadata/${contractName}`;
+  const filePath = path.join(folderPath, `${contractName}.json`);
   const collaborators = ["0x0000000000000000000000000000000000000000"];
 
   const data = {
-    name,
-    description: description || existingData.description || "",
-    image: imageCID ? `ipfs://${imageCID}` : existingData.image || "",
-    banner_image: bannerImageCID
-      ? `ipfs://${bannerImageCID}`
-      : existingData.banner_image || "",
-    featured_image: featuredImageCID
-      ? `ipfs://${featuredImageCID}`
-      : existingData.featured_image || "",
-    external_link: externalLink || existingData.external_link || "",
-    collaborators: existingData.collaborators || collaborators,
+    name: contractName,
+    description,
+    image: `ipfs://${image}`,
+    banner_image: `ipfs://${bannerImage}`,
+    featured_image: `ipfs://${featuredImage}`,
+    external_link: externalLink,
+    collaborators,
   };
 
   if (!fs.existsSync(folderPath)) {
@@ -109,8 +103,25 @@ async function createContractMetadata(folderPath, name) {
   });
 }
 
-// Function to create or update token metadata
-async function createTokenMetadata(folderPath, name) {
+async function createTokenMetadata(options) {
+  clear();
+  const {
+    contractName,
+    externalUrl,
+    image,
+    tokenName,
+    attributes,
+    description,
+  } = options;
+
+  if (!contractName || !externalUrl || !image || !tokenName || !attributes) {
+    throw new Error(
+      "All options (--contract-name or -cn, --external-url or -eu, --image-cid or -ic, --token-name or -tn, --attributes or -a) are required for 'token' metadata creation."
+    );
+  }
+
+  const folderPath = `metadata/${contractName}`;
+
   if (!fs.existsSync(folderPath)) {
     console.log(
       "Contract metadata does not exist. Please create contract metadata first."
@@ -123,7 +134,8 @@ async function createTokenMetadata(folderPath, name) {
 
   const files = fs
     .readdirSync(folderPath)
-    .filter((file) => file !== `${name}.json`);
+    .filter((file) => file !== `${contractName}.json`);
+
   if (files.length > 0) {
     console.log("Existing token metadata files:");
     files.forEach((file) => console.log(file));
@@ -140,8 +152,8 @@ async function createTokenMetadata(folderPath, name) {
       filePath = path.join(folderPath, fileName.trim());
 
       if (!fs.existsSync(filePath)) {
-        console.log("File does not exist. Exiting.");
-        return;
+        console.log("File does not exist. Creating a new file.");
+        update = false;
       }
     }
   }
@@ -156,30 +168,10 @@ async function createTokenMetadata(folderPath, name) {
     existingData = JSON.parse(fs.readFileSync(filePath, "utf8"));
   }
 
-  clear();
-  const description = await getValidInput("Enter description: ");
-  const externalUrl = await getValidInput("Enter external URL: ");
-  const tokenImageCID = await getValidInput("Enter image CID: ");
-
-  const tokenName = await getValidInput("Enter token name: ");
-  const attributes = await getValidInput(
-    "Enter attributes (JSON array format): ",
-    (input) => {
-      try {
-        JSON.parse(input);
-        return true;
-      } catch {
-        return false;
-      }
-    }
-  );
-
   const data = {
     description: description || existingData.description || "",
     external_url: externalUrl || existingData.external_url || "",
-    image: tokenImageCID
-      ? `ipfs://${tokenImageCID}`
-      : existingData.tokenImageCID || "",
+    image: `ipfs://${image}` || existingData.image || "",
     name: tokenName || existingData.name || "",
     attributes: JSON.parse(attributes) || existingData.attributes || [],
   };
@@ -193,33 +185,31 @@ async function createTokenMetadata(folderPath, name) {
   });
 }
 
-// Main function to create metadata
 async function createMetadata(options) {
   clear();
-  const metadataType = options.type;
-  const name = options.name;
+  try {
+    if (!options.type) {
+      throw new Error(
+        "Type (--type or -t) is required. Use 'contract' or 'token'."
+      );
+    }
 
-  if (!metadataType) {
-    throw new Error(
-      "Metadata type (--type or -t) is required. Use 'contract' or 'token'."
-    );
-  }
-
-  if (!name) {
-    throw new Error("Collection name (--name or -n) is required.");
-  }
-
-  clear();
-  const folderPath = `metadata/${name}`;
-
-  if (metadataType.toLowerCase() === "contract") {
-    await createContractMetadata(folderPath, name);
-  } else if (metadataType.toLowerCase() === "token") {
-    await createTokenMetadata(folderPath, name);
+    if (options.type === "contract") {
+      await createContractMetadata(options);
+    } else if (options.type === "token") {
+      await createTokenMetadata(options);
+    } else {
+      throw new Error(
+        "Invalid type (--type or -t). Use 'contract' or 'token'."
+      );
+    }
+  } catch (error) {
+    console.error("Error during script execution:", error.message);
+  } finally {
+    rl.close();
   }
 }
 
-// Script execution entry point
 const args = process.argv.slice(2);
 if (args.length > 0 && args[0] === "create") {
   createMetadata(program.opts()).catch((error) => {
