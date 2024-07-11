@@ -121,36 +121,110 @@ contract ERC1155test is DSTest, ERC1155TokenReceiver {
     MultiToken token;
 
     function setUp() public {
-        // Changed to match the MultiToken constructor parameters
         token = new MultiToken(
             "https://example.com/api/token/",
             "https://example.com/api/contract.json"
         );
 
-        // Added to grant the MINTER_ROLE to the test contract
         token.grantRole(token.MINTER_ROLE(), address(this));
+        token.grantRole(token.BURNER_ROLE(), address(this));
     }
 
+    //Test Case #1 - Minting to an EOA
     function testMintToEOA() public {
         token.mint(address(0xBEEF), 1337, 1, "");
 
         assertEq(token.balanceOf(address(0xBEEF), 1337), 1);
     }
 
+    //Test Case #2 - Minting to an ERC1155Recipient
     function testMintToERC1155Recipient() public {
         ERC1155Recipient to = new ERC1155Recipient();
 
         token.mint(address(to), 1337, 1, "testing 123");
 
-        assertEq(token.balanceOf(address(to), 1337), 1);
+        assertEq(token.balanceOf(address(to), 1337), 1, "testing 123");
 
-        // Updated to match the ERC1155Recipient state variables
         assertEq(to.operator(), address(this));
         assertEq(to.from(), address(0));
-        assertEq(to.tokenId(), 1337); // Changed to to.tokenId() to match ERC1155Recipient
-        assertEq(to.amount(), 1); // Added to assert amount received
-        // assertEq(to.data(), "testing 123"); // Added to assert the received data
+        assertEq(to.tokenId(), 1337);
+        assertEq(to.amount(), 1);
+        // assertEq(to.data(), "testing 123");
     }
 
-     function test
+    //Test Case #3 - testing BatchMint method from MultiToken.sol
+    function testBatchMintToEOA() public {
+        uint256[] memory ids = new uint256[](3);
+        ids[0] = 1337;
+        ids[1] = 1338;
+        ids[2] = 1339;
+
+        uint256[] memory amounts = new uint256[](3);
+        amounts[0] = 100;
+        amounts[1] = 200;
+        amounts[2] = 300;
+
+        token.batchMint(address(0xBEEF), ids, amounts, "testing 123");
+
+        assertEq(token.balanceOf(address(0xBEEF), 1337), 100, "testing 123");
+        assertEq(token.balanceOf(address(0xBEEF), 1338), 200, "testing 123");
+        assertEq(token.balanceOf(address(0xBEEF), 1339), 300, "testing 123");
+    }
+
+    //Test Case #4 - testing BatchMint method from MultiToken.sol to ERC1155Recipient
+    function testBatchMintToERC1155Recipient() public {
+        ERC1155Recipient to = new ERC1155Recipient();
+
+        uint256[] memory ids = new uint256[](3);
+        ids[0] = 1337;
+        ids[1] = 1338;
+        ids[2] = 1339;
+
+        uint256[] memory amounts = new uint256[](3);
+        amounts[0] = 100;
+        amounts[1] = 200;
+        amounts[2] = 300;
+
+        token.batchMint(address(to), ids, amounts, "testing 123");
+
+        assertEq(token.balanceOf(address(to), 1337), 100, "testing 123");
+        assertEq(token.balanceOf(address(to), 1338), 200, "testing 123");
+        assertEq(token.balanceOf(address(to), 1339), 300, "testing 123");
+    }
+
+    //Test Case #5 - test burn method from MultiToken.sol
+    function testBurn() public {
+        token.mint(address(0xBEEF), 1377, 100, "");
+
+        token.burn(address(0xBEEF), 1377, 70);
+
+        assertEq(token.balanceOf(address(0xBEEF), 1377), 30);
+    }
+
+    //Test Case #6 - test batchBurn method from MultiToken.sol
+    function testBatchBurn() public {
+        uint256[] memory ids = new uint256[](3);
+        ids[0] = 1337;
+        ids[1] = 1338;
+        ids[2] = 1339;
+
+        uint256[] memory amounts = new uint256[](3);
+        amounts[0] = 100;
+        amounts[1] = 200;
+        amounts[2] = 300;
+
+        token.batchMint(address(0xBEEF), ids, amounts, "testing 123");
+
+        token.batchBurn(address(0xBEEF), ids, amounts);
+
+        assertEq(token.balanceOf(address(0xBEEF), 1337), 0);
+        assertEq(token.balanceOf(address(0xBEEF), 1338), 0);
+        assertEq(token.balanceOf(address(0xBEEF), 1339), 0);
+    }
+
+     function testApproveAll() public {
+        token.setApprovalForAll(address(0xBEEF), true);
+
+        assertTrue(token.isApprovedForAll(address(this), address(0xBEEF)));
+    }
 }
