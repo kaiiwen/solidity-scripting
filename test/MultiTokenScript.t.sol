@@ -14,16 +14,61 @@ contract MultiTokenScriptTest is DSTest {
 
     function setUp() public {
         script = new MultiTokenScript();
-        deployer = address(1);
-        user = address(2);
-        multiToken = new MultiToken("https://example.com/", "https://example.com/metadata");
+        deployer = 0xEc38dA4D0947C03573b3B1eb98cCbcd2F1292369;
+        user = address(1);
+        multiToken = new MultiToken(
+            "https://example.com/",
+            "https://example.com/metadata",
+            "MultiToken",
+            "MT"
+        );
+        multiToken.grantRole(multiToken.MINTER_ROLE(), deployer);
     }
 
     function test_Deploy() public {
-        script.deploy("https://example.com/", "https://example.com/metadata");
+        script.deploy(
+            "https://example.com/",
+            "https://example.com/metadata",
+            "MultiToken",
+            "MT"
+        );
     }
 
     function test_Mint() public {
-        script.mint(address(multiToken), address(1), new uint256[](1), new uint256[](1), "");
+        // Setup addresses and roles
+        uint256[] memory ids = new uint256[](1);
+        uint256[] memory amounts = new uint256[](1);
+        ids[0] = 1;
+        amounts[0] = 1;
+
+        script.deploy(
+            "https://example.com/",
+            "https://example.com/metadata",
+            "MultiToken",
+            "MT"
+        );
+
+        script.mint(address(multiToken), deployer, ids, amounts, "");
+
+        // Verify minting
+        assertEq(multiToken.balanceOf(deployer, 1), 1);
+    }
+
+    function testFailMint() public {
+        multiToken.revokeRole(multiToken.BURNER_ROLE(), deployer);
+
+        uint256[] memory ids = new uint256[](1);
+        uint256[] memory amounts = new uint256[](1);
+        ids[0] = 1;
+        amounts[0] = 1;
+
+        script.deploy(
+            "https://example.com/",
+            "https://example.com/metadata",
+            "MultiToken",
+            "MT"
+        );
+
+        script.mint(address(multiToken), deployer, ids, amounts, "");
     }
 }
