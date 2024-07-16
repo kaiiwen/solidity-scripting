@@ -123,7 +123,9 @@ contract ERC1155test is DSTest, ERC1155TokenReceiver {
     function setUp() public {
         token = new MultiToken(
             "https://example.com/api/token/",
-            "https://example.com/api/contract.json"
+            "https://example.com/api/contract.json",
+            "TokenName",
+            "TokenSymbol"
         );
 
         token.grantRole(token.MINTER_ROLE(), address(this));
