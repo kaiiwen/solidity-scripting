@@ -201,7 +201,13 @@ contract ERC1155test is DSTest, ERC1155TokenReceiver {
         assertEq(token.balanceOf(address(0xBEEF), 1377), 30);
     }
 
-    //Test Case #6 - test batchBurn method from MultiToken.sol
+    //Test Case #6 - test burn method from MultiToken.sol with insufficient balance
+    function testFailBurnInsufficientBalance() public {
+        token.mint(address(0xBEEF), 1337, 70, "");
+        token.burn(address(0xBEEF), 1337, 100);
+    }
+
+    //Test Case #7 - test batchBurn method from MultiToken.sol
     function testBatchBurn() public {
         uint256[] memory ids = new uint256[](3);
         ids[0] = 1337;
@@ -222,9 +228,54 @@ contract ERC1155test is DSTest, ERC1155TokenReceiver {
         assertEq(token.balanceOf(address(0xBEEF), 1339), 0);
     }
 
-     function testApproveAll() public {
+    //Test Case #8 - test batchBurn method from MultiToken.sol with insufficient balance
+    function testFailBatchBurnInsufficientBalance() public {
+        uint256[] memory ids = new uint256[](3);
+        ids[0] = 1337;
+        ids[1] = 1338;
+        ids[2] = 1339;
+
+        uint256[] memory amounts = new uint256[](3);
+        amounts[0] = 100;
+        amounts[1] = 200;
+        amounts[2] = 300;
+
+        token.batchMint(address(0xBEEF), ids, amounts, "testing 123");
+
+        uint256[] memory amounts2 = new uint256[](3);
+        amounts2[0] = 100;
+        amounts2[1] = 200;
+        amounts2[2] = 400;
+
+        token.batchBurn(address(0xBEEF), ids, amounts2);
+    }
+
+    //Test Case #9 - test approve all method from ERC1155.sol
+    function testApproveAll() public {
         token.setApprovalForAll(address(0xBEEF), true);
 
         assertTrue(token.isApprovedForAll(address(this), address(0xBEEF)));
     }
+
+    // function testMintWithoutMinterRole() public {
+    //     // Remove MINTER_ROLE from this contract
+    //     token.revokeRole(token.MINTER_ROLE(), address(this));
+
+    //     // Verify the role has been revoked
+    //     bool hasRole = token.hasRole(token.MINTER_ROLE(), address(this));
+    //     assertTrue(!hasRole, "Role revocation failed");
+
+    //     // Expect a revert when trying to mint
+    //     try token.mint(address(0xBEEF), 1337, 1, "") {
+    //         fail();
+    //     } catch Error(string memory reason) {
+    //         emit log(reason); // Log the actual reason for comparison
+    //         assertEq(
+    //             reason,
+    //             "AccessControlUnauthorizedAccount(0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496, 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6)"
+    //         );
+    //     } catch (bytes memory) {
+    //         fail();
+    //     }
+    // }
 }
