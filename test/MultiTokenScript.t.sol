@@ -55,7 +55,7 @@ contract MultiTokenScriptTest is DSTest {
     }
 
     function testFailMint() public {
-        multiToken.revokeRole(multiToken.BURNER_ROLE(), deployer);
+        multiToken.revokeRole(multiToken.MINTER_ROLE(), deployer);
 
         uint256[] memory ids = new uint256[](1);
         uint256[] memory amounts = new uint256[](1);
