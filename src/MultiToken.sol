@@ -46,6 +46,10 @@ contract MultiToken is ERC1155, AccessControl {
         return contractMetadataURI;
     }
 
+    function tokenURI(uint256 _tokenId) public view returns (string memory) {
+        return string(abi.encodePacked(baseURI, _tokenId.toString(), ".json")) ;
+    }
+
     function mint(
         address to,
         uint256 id,
